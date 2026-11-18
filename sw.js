@@ -1,6 +1,6 @@
 // アプリの画面(HTML/CSS/JS)を端末に保存して、通信が弱くても開けるようにします。
 // 更新したときは、下の CACHE の数字を 1 つ上げてください。
-var CACHE = 'tacica-lyrics-v2';
+var CACHE = 'tacica-lyrics-v3';
 var ASSETS = [
   './', './index.html', './style.css', './app.js', './songs.js', './lyrics.js',
   './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'
@@ -27,7 +27,7 @@ self.addEventListener('fetch', function (e) {
   var url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request).then(function (r) {
+    fetch(e.request, { cache: 'no-cache' }).then(function (r) {
       var copy = r.clone();
       caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
       return r;
