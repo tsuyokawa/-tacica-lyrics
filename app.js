@@ -9,6 +9,7 @@
   var current = null;
   var lines = [], els = [], activeIdx = -1;
   var pendingJump = true;
+  var apiProblem = '';   // YouTubeのプレーヤーに問題があるとき、理由を入れる
 
   // ---- 曲の一覧(songs.js + この端末で追加したもの) ----
   var extras = [];
@@ -69,7 +70,7 @@
   function select(song) {
     current = song;
     titleEl.textContent = song.title || song.id;
-    statusEl.textContent = '再生ボタンを押すと、歌詞が動きます。';
+    statusEl.textContent = apiProblem || '再生ボタンを押すと、歌詞が動きます。';
     bgEl.style.backgroundImage = 'url(https://i.ytimg.com/vi/' + song.id + '/hqdefault.jpg)';
     build((window.LYRICS || {})[song.id] || window.DEMO_LINES);
     if (player && ready) {
@@ -105,6 +106,7 @@
 
   // ---- YouTube埋め込みプレーヤー ----
   window.onYouTubeIframeAPIReady = function () {
+    try {
     player = new YT.Player('player', {
       width: '100%',
       height: '100%',
@@ -113,18 +115,32 @@
       events: {
         onReady: function () {
           ready = true;
+          apiProblem = '';
           if (pendingId) player.cueVideoById(pendingId);
         },
         onStateChange: onState,
         onError: onError
       }
     });
+    } catch (err) {
+      apiProblem = 'プレーヤーを作れませんでした: ' + err.message;
+      statusEl.textContent = apiProblem;
+    }
   };
 
   var tag = document.createElement('script');
   tag.src = 'https://www.youtube.com/iframe_api';
-  tag.onerror = function () { statusEl.textContent = 'YouTubeの読み込みに失敗しました。通信を確認してください。'; };
+  tag.onerror = function () {
+    apiProblem = 'YouTubeのプレーヤーを読み込めませんでした(ブロックされている可能性があります)。';
+    statusEl.textContent = apiProblem;
+  };
   document.head.appendChild(tag);
+  setTimeout(function () {
+    if (!ready && !apiProblem) {
+      apiProblem = 'YouTubeのプレーヤーを読み込めていません。広告ブロックの拡張機能や、通信の制限が原因かもしれません。別のブラウザでも試してください。';
+      statusEl.textContent = apiProblem;
+    }
+  }, 8000);
 
   function onState(e) {
     // 動画のタイトルが分かったら、曲名として保存する
@@ -192,4 +208,8 @@
   }
 
   renderList();
+
+  // 開いたときに、先頭の曲を自動で選んでおく(再生ボタンが見えるようにするため)
+  var first = allSongs()[0];
+  if (first) select(first);
 })();
